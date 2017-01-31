@@ -108,11 +108,10 @@ int ompi_file_open(struct ompi_communicator_t *comm, const char *filename,
     file->f_comm = comm;
     OBJ_RETAIN(comm);
 
-    /* Present the info to the info layer */
-
-    if (OPAL_SUCCESS != opal_infosubscribe_change_info(&file->super, info)) {
-        OBJ_RELEASE(file);
-        return ret;
+    /* Copy the info for the info layer */
+    file->super.s_info = OBJ_NEW(opal_info_t);
+    if (info) {
+        opal_info_dup(info, &(file->super.s_info));
     }
 
     file->f_amode = amode;
@@ -295,6 +294,13 @@ static void file_destructor(ompi_file_t *file)
         OBJ_RELEASE(file->error_handler);
 #if OPAL_ENABLE_DEBUG
         file->error_handler = NULL;
+#endif
+    }
+
+    if (NULL != file->super.s_info) {
+        OBJ_RELEASE(file->super.s_info);
+#if OPAL_ENABLE_DEBUG
+        file->super.s_info = NULL;
 #endif
     }
 

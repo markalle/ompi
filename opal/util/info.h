@@ -108,6 +108,34 @@ int opal_mpiinfo_init(void*);
 int opal_info_dup (opal_info_t *info, opal_info_t **newinfo);
 
 /**
+ *   opal_info_dup_mpistandard - Duplicate an 'MPI_Info' object
+ *
+ *   @param info source info object (handle)
+ *   @param newinfo pointer to the new info object (handle)
+ *
+ *   @retval MPI_SUCCESS upon success
+ *   @retval MPI_ERR_NO_MEM if out of memory
+ *
+ *   The user sets an info object with key/value pairs and once processed,
+ *   we keep key/val pairs that might have been modified vs what the user
+ *   provided, and some user inputs might have been ignored too.  The original
+ *   user inpust are kept as __IN_<key>/<val>.
+ *
+ *   This routine then outputs key/value pairs as:
+ *
+ *   if <key> and __IN_<key> both exist:
+ *       This means the user set a k/v pair and it was used.
+ *       output: <key> / value(__IN_<key>), the original user input
+ *   if <key> exists but __IN_<key> doesn't:
+ *       This is a system-provided setting.
+ *       output: <key>/value(<key>)
+ *   if __IN_<key> exists but <key> doesn't:
+ *       The user provided a setting that was rejected (ignored) by the system
+ *       output: nothing for this key
+ */
+int opal_info_dup_mpistandard (opal_info_t *info, opal_info_t **newinfo);
+
+/**
  * Set a new key,value pair on info.
  *
  * @param info pointer to opal_info_t object
