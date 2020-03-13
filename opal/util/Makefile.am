@@ -74,6 +74,7 @@ headers = \
         sys_limits.h \
         timings.h \
         uri.h \
+        setic.h \
         info_subscriber.h \
 	info.h
 
@@ -112,6 +113,7 @@ libopalutil_la_SOURCES = \
         string_copy.c \
         sys_limits.c \
         uri.c \
+        setic.c \
         info_subscriber.c \
         info.c
 

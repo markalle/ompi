@@ -207,7 +207,7 @@ typedef struct {
         pmix_value_t _kv;                       \
         PMIX_VALUE_LOAD(&_kv, (d), (t));        \
         (r) = PMIx_Put((sc), (s), &(_kv));      \
-                OPAL_ERROR_LOG((r));            \
+        if ((r) != PMIX_SUCCESS) { OPAL_ERROR_LOG((r)); } \
     } while(0);
 
 /**

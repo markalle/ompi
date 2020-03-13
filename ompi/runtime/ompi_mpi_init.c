@@ -63,6 +63,7 @@
 #include "opal/mca/pmix/base/base.h"
 #include "opal/util/timings.h"
 #include "opal/util/opal_environ.h"
+#include "opal/util/setic.h"
 
 #include "ompi/constants.h"
 #include "ompi/mpi/fortran/base/constants.h"
@@ -529,6 +530,7 @@ int ompi_mpi_init(int argc, char **argv, int requested, int *provided,
     OMPI_TIMING_IMPORT_OPAL("rte_init");
 
     ompi_rte_initialized = true;
+    opal_setic();
 
     /* Register the default errhandler callback  */
     /* we want to go first */
