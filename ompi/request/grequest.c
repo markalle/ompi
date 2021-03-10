@@ -11,6 +11,7 @@
  *                         All rights reserved.
  * Copyright (c) 2006-2012 Cisco Systems, Inc.  All rights reserved.
  * Copyright (c) 2009      Sun Microsystems, Inc.  All rights reserved.
+ * Copyright (c) 2021      IBM Corporation.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -121,14 +122,26 @@ static void ompi_grequest_construct(ompi_grequest_t* greq)
  */
 static void ompi_grequest_destruct(ompi_grequest_t* greq)
 {
+    int rc;
     MPI_Fint ierr;
 
     if (greq->greq_free.c_free != NULL) {
         if (greq->greq_funcs_are_c) {
-            greq->greq_free.c_free(greq->greq_state);
+            rc = greq->greq_free.c_free(greq->greq_state);
         } else {
             greq->greq_free.f_free((MPI_Aint*)greq->greq_state, &ierr);
+            rc = OMPI_FINT_2_INT(ierr);
         }
+    }
+
+    /* We used to put the query_fn()'s return value into the
+     * status.MPI_ERROR but for MPI_{Wait,Test}* the standard
+     * specifically says it's the free_fn() callback whose
+     * return value goes into the MPI call's return or its
+     * status[i].MPI_ERROR value.
+     */
+    if( MPI_SUCCESS != rc ) {
+        greq->greq_base.req_status.MPI_ERROR = rc;
     }
 
     OMPI_REQUEST_FINI(&greq->greq_base);
@@ -203,6 +216,20 @@ int ompi_grequest_invoke_query(ompi_request_t *request,
     int rc = OMPI_SUCCESS;
     ompi_grequest_t *g = (ompi_grequest_t*) request;
 
+    /*
+     * The current design is that callback return failures go into
+     * in status.MPI_ERROR, which wouldn't be consistent with top
+     * level MPI behavior.  That means this function isn't intended
+     * to be given an actual MPI_Status from the user's MPI code, it
+     * should only be given the internal request->req_status and
+     * the higher levels will decide whether it goes into some
+     * status[i].MPI_ERROR or not.  This assert just confirms that
+     * requirement is being met (all the uses of invoke_query() were
+     * already doing that, so this is just describing the design
+     * not changing anything).
+     */
+    assert(status == &request->req_status);
+
     /* MPI-3 mandates that the return value from the query function
      * (i.e., the int return value from the C function or the ierr
      * argument from the Fortran function) must be returned to the
@@ -214,13 +241,39 @@ int ompi_grequest_invoke_query(ompi_request_t *request,
         if (g->greq_funcs_are_c) {
             rc = g->greq_query.c_query(g->greq_state, status);
         } else {
+            /* The design's intent is that request->req_status.MPI_ERROR
+             * was initialized to success and it's meant to be unmodified
+             * in the case of callback success, and it's debatable whether
+             * it should be set to the query_fn's return value if the
+             * callback fails.  But it definitely shouldn't be given whatever
+             * MPI_ERROR setting fstatus has on the stack (the f_query fn.
+             * isn't supposed to directly set its status.MPI_ERROR)
+             *
+             * So the Status_c2f below only really cares about transferring
+             * the MPI_ERROR setting into fstatus so that when it's transferred
+             * back in the f2c call, it has the starting value.
+             */
             MPI_Fint ierr;
             MPI_Fint fstatus[sizeof(MPI_Status) / sizeof(int)];
+            MPI_Status_c2f(status, fstatus);
             g->greq_query.f_query((MPI_Aint*)g->greq_state, fstatus, &ierr);
             MPI_Status_f2c(fstatus, status);
             rc = OMPI_FINT_2_INT(ierr);
         }
     }
+    /* For discussion purposes: I'm not positive the below status.MPI_ERROR
+     * should be set for Wait/Test*.  The (3.1) standard appears to say for
+     * calls like MPI_{Wait,Test} that we're only supposed to use the return
+     * value of free_fn(), not query_fn().  But for Request_get_status we
+     * still would look at query_fn()'s return.
+     *
+     * For now I'm leaving this because
+     * 1. it's harder to change since we don't know if we're in Wait/Test*
+     *    or Request_get_status at this point, but more so
+     * 2. I think our behavior makes more sense, where we look at both
+     *    return value from query_fn() and return value from free_fn()
+     *    and the standard isn't super clear anyway
+     */
     if( MPI_SUCCESS != rc ) {
         status->MPI_ERROR = rc;
     }
