@@ -13,6 +13,7 @@
  * Copyright (c) 2011-2015 NVIDIA Corporation.  All rights reserved.
  * Copyright (c) 2015      Los Alamos National Security, LLC. All rights
  *                         reserved.
+ * Copyright (c) 2021      IBM Corporation.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -124,7 +125,7 @@ struct opal_common_cuda_function_table {
 };
 typedef struct opal_common_cuda_function_table opal_common_cuda_function_table_t;
 
-void mca_cuda_convertor_init(opal_convertor_t* convertor, const void *pUserBuf);
+void mca_cuda_convertor_init(opal_convertor_t* convertor, const void *first_byte_of_userbuf);
 bool opal_cuda_check_bufs(char *dest, char *src);
 bool opal_cuda_check_one_buf(char *buf, opal_convertor_t *convertor );
 void* opal_cuda_malloc(size_t size, opal_convertor_t* convertor);

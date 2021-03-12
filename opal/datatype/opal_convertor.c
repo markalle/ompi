@@ -15,6 +15,7 @@
  * Copyright (c) 2013-2018 Research Organization for Information Science
  *                         and Technology (RIST).  All rights reserved.
  * Copyright (c) 2017      Intel, Inc. All rights reserved
+ * Copyright (c) 2021      IBM Corporation.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -572,7 +573,8 @@ int32_t opal_convertor_prepare_for_recv( opal_convertor_t* convertor,
     convertor->flags |= CONVERTOR_RECV;
 #if OPAL_CUDA_SUPPORT
     if (!( convertor->flags & CONVERTOR_SKIP_CUDA_INIT )) {
-        mca_cuda_convertor_init(convertor, pUserBuf);
+        mca_cuda_convertor_init(convertor, pUserBuf +
+                                GET_OFFSET_OF_FIRST_BYTE(datatype));
     }
 #endif
 
@@ -613,7 +615,8 @@ int32_t opal_convertor_prepare_for_send( opal_convertor_t* convertor,
     convertor->flags |= CONVERTOR_SEND;
 #if OPAL_CUDA_SUPPORT
     if (!( convertor->flags & CONVERTOR_SKIP_CUDA_INIT )) {
-        mca_cuda_convertor_init(convertor, pUserBuf);
+        mca_cuda_convertor_init(convertor, pUserBuf +
+                                GET_OFFSET_OF_FIRST_BYTE(datatype));
     }
 #endif
 

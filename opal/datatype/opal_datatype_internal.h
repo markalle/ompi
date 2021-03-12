@@ -32,6 +32,7 @@
 
 #include <stdarg.h>
 #include <string.h>
+#include "opal/datatype/opal_datatype.h"
 
 #if defined(VERBOSE)
 #include "opal/util/output.h"
@@ -596,6 +597,66 @@ static inline int GET_FIRST_NON_LOOP( const union dt_elem_desc* _pElem )
         else                                                                \
             (COUNTER) = (ELEMENT)->elem.count * (ELEMENT)->elem.blocklen;   \
     } while (0)
+
+static inline ptrdiff_t
+GET_OFFSET_OF_FIRST_BYTE(opal_datatype_t *dt)
+{
+    dt_elem_desc_t *description;
+    dt_elem_desc_t *pElem, *pLast;
+    ptrdiff_t first_disp_of_userbuf;
+
+    description = dt->opt_desc.desc;
+    if( NULL == description ) {
+        description = dt->desc.desc;
+    }
+
+    pElem = pLast = &(description[0]);
+    /* The only thing pLast is used for is to make sure the loop below
+     * doesn't run away if presented with bad data, or in case I've
+     * misinterpreted what's possible in a description.
+     */
+    if (OPAL_DATATYPE_LOOP == pElem->loop.common.type) {
+        /* .items seems to be sized to count the entries
+         * inside the loop and also the terminator, so
+         * if the loop was [LOOP something something END_LOOP]
+         * .items would be 3.  So the below puts us on the
+         * last entry of description[] which I'd expect to
+         * be an END_LOOP
+         */
+        pLast += pElem->loop.items;
+    }
+
+    /*
+     * Find the first FLAG_DATA element in the description.
+     *
+     * I have an extra check for degenerate loops to see if there's
+     * a bundle of elements being "looped" over for 0 iterations.  A
+     * FLAG_DATA pElem from inside that loop wouldn't be what we want.
+     * I don't know if OMPI can actually be tricked into producing
+     * degenerate loops like that or not, probably not, I'm just being
+     * careful.
+     */
+    while (!(pElem->elem.common.flags & OPAL_DATATYPE_FLAG_DATA)
+        && pElem < pLast)
+    {
+        if (OPAL_DATATYPE_LOOP == pElem->loop.common.type &&
+            pElem->loop.loops == 0)
+        {
+            pElem += (pElem->loop.items + 1);
+        } else {
+            ++pElem;
+        }
+    }
+
+    if (pElem <= pLast) {
+        first_disp_of_userbuf = pElem->elem.disp;
+    } else {
+        /* if we somehow failed to process the datatype description */
+        first_disp_of_userbuf = 0;
+    }
+
+    return first_disp_of_userbuf;
+}
 
 OPAL_DECLSPEC int opal_datatype_contain_basic_datatypes( const struct opal_datatype_t* pData, char* ptr, size_t length );
 OPAL_DECLSPEC int opal_datatype_dump_data_flags( unsigned short usflags, char* ptr, size_t length );

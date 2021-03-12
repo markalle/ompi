@@ -14,6 +14,7 @@
  * Copyright (c) 2015      Research Organization for Information Science
  *                         and Technology (RIST). All rights reserved.
  * Copyright (c) 2018      Amazon.com, Inc. or its affiliates.  All Rights reserved.
+ * Copyright (c) 2021      IBM Corporation.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -2123,7 +2124,7 @@ void opal_cuda_add_initialization_function(int (*fptr)(opal_common_cuda_function
  * is enabled or not.  If CUDA is not enabled, then short circuit out
  * for all future calls.
  */
-void mca_cuda_convertor_init(opal_convertor_t* convertor, const void *pUserBuf)
+void mca_cuda_convertor_init(opal_convertor_t* convertor, const void *first_byte_of_userbuf)
 {
     /* Only do the initialization on the first GPU access */
     if (!initialized) {
@@ -2139,7 +2140,7 @@ void mca_cuda_convertor_init(opal_convertor_t* convertor, const void *pUserBuf)
         return;
     }
 
-    if (ftable.gpu_is_gpu_buffer(pUserBuf, convertor)) {
+    if (ftable.gpu_is_gpu_buffer(first_byte_of_userbuf, convertor)) {
         convertor->flags |= CONVERTOR_CUDA;
     }
 }
